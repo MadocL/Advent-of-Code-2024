@@ -35,14 +35,15 @@ def re_order_update(update, rules_subset):
     j = 0
     while j < len(rules_subset):
         rule = rules_subset[j]
+
         if update.index(rule[0]) > update.index(rule[1]):
-            if (
-                violated_rules_count(swap_left_to_right(update, update.index(rule[1])), rules_subset)
-                < violated_rules_count(swap_right_to_left(update, update.index(rule[0])), rules_subset)
-            ):
-                update = swap_left_to_right(update, update.index(rule[1]))
+            new_update_1 = swap_left_to_right(update, update.index(rule[1]))
+            new_update_2 = swap_right_to_left(update, update.index(rule[0]))
+
+            if violated_rules_count(new_update_1, rules_subset) < violated_rules_count(new_update_2, rules_subset):
+                update = new_update_1
             else:
-                update = swap_right_to_left(update, update.index(rule[0]))
+                update = new_update_2
             rules_subset = sample(rules_subset, len(rules_subset))
             j = 0
         else:
@@ -66,9 +67,7 @@ def swap_left_to_right(update, index):
     if index == len(update) - 1:
         return update
 
-    temp = update[index]
-    update[index] = update[index + 1]
-    update[index + 1] = temp
+    update[index], update[index + 1] = update[index + 1], update[index]
 
     return update
 
@@ -77,9 +76,7 @@ def swap_right_to_left(update, index):
     if index == 0:
         return update
 
-    temp = update[index]
-    update[index] = update[index - 1]
-    update[index - 1] = temp
+    update[index], update[index - 1] = update[index - 1], update[index]
 
     return update
 
