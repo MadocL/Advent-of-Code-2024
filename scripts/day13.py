@@ -36,7 +36,6 @@ def compute_solutions(machine_config):
 
 
 if __name__ == "__main__":
-    # f = open("inputs/day13_example.txt", "r")
     f = open("inputs/day13.txt", "r")
     inputs = f.read().split("\n\n")
     f.close()
