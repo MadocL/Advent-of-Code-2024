@@ -3,22 +3,30 @@ from copy import deepcopy
 from rich.console import Console
 
 
-def move_robot(map_, robot_pos, move):
+def move_robot(map_, robot_pos, move, new_map=False):
     if move == "^":
-        if "." not in map_[:robot_pos[0], robot_pos[1]]:
-            return map_, robot_pos  # do nothing, robot can't move
+        if new_map:
+            result = move_cells_upward(deepcopy(map_), robot_pos, move)
+            if result is not False:
+                map_ = result
+                robot_pos[0] -= 1
 
-        block_last_idx = robot_pos[0] - 1
-        while "." not in map_[block_last_idx:robot_pos[0], robot_pos[1]]:
-            if "#" in map_[block_last_idx:robot_pos[0], robot_pos[1]]:
-                return map_, robot_pos  # can't move walls
-            block_last_idx -= 1
+            return map_, robot_pos
+        else:
+            if "." not in map_[:robot_pos[0], robot_pos[1]]:
+                return map_, robot_pos  # do nothing, robot can't move
 
-        map_[block_last_idx:robot_pos[0], robot_pos[1]] = map_[block_last_idx + 1: robot_pos[0] + 1, robot_pos[1]]
-        map_[robot_pos[0], robot_pos[1]] = "."
-        robot_pos[0] -= 1
+            block_last_idx = robot_pos[0] - 1
+            while "." not in map_[block_last_idx:robot_pos[0], robot_pos[1]]:
+                if "#" in map_[block_last_idx:robot_pos[0], robot_pos[1]]:
+                    return map_, robot_pos  # can't move walls
+                block_last_idx -= 1
 
-        return map_, robot_pos
+            map_[block_last_idx:robot_pos[0], robot_pos[1]] = map_[block_last_idx + 1: robot_pos[0] + 1, robot_pos[1]]
+            map_[robot_pos[0], robot_pos[1]] = "."
+            robot_pos[0] -= 1
+
+            return map_, robot_pos
 
     elif move == ">":
         if "." not in map_[robot_pos[0]][robot_pos[1] + 1:]:
@@ -37,20 +45,29 @@ def move_robot(map_, robot_pos, move):
         return map_, robot_pos
 
     elif move == "v":
-        if "." not in map_[robot_pos[0] + 1:, robot_pos[1]]:
-            return map_, robot_pos  # do nothing, robot can't move
+        if new_map:
+            result = move_cells_downward(deepcopy(map_), robot_pos, move)
+            if result is not False:
+                map_ = result
+                robot_pos[0] += 1
 
-        block_last_idx = robot_pos[0] + 1
-        while "." not in map_[robot_pos[0]:block_last_idx, robot_pos[1]]:
-            if "#" in map_[robot_pos[0]:block_last_idx, robot_pos[1]]:
-                return map_, robot_pos  # can't move walls
-            block_last_idx += 1
+            return map_, robot_pos
 
-        map_[robot_pos[0] + 1:block_last_idx, robot_pos[1]] = map_[robot_pos[0]:block_last_idx - 1, robot_pos[1]]
-        map_[robot_pos[0], robot_pos[1]] = "."
-        robot_pos[0] += 1
+        else:
+            if "." not in map_[robot_pos[0] + 1:, robot_pos[1]]:
+                return map_, robot_pos  # do nothing, robot can't move
 
-        return map_, robot_pos
+            block_last_idx = robot_pos[0] + 1
+            while "." not in map_[robot_pos[0]:block_last_idx, robot_pos[1]]:
+                if "#" in map_[robot_pos[0]:block_last_idx, robot_pos[1]]:
+                    return map_, robot_pos  # can't move walls
+                block_last_idx += 1
+
+            map_[robot_pos[0] + 1:block_last_idx, robot_pos[1]] = map_[robot_pos[0]:block_last_idx - 1, robot_pos[1]]
+            map_[robot_pos[0], robot_pos[1]] = "."
+            robot_pos[0] += 1
+
+            return map_, robot_pos
 
     elif move == "<":
         if "." not in map_[robot_pos[0]][:robot_pos[1]]:
@@ -67,33 +84,6 @@ def move_robot(map_, robot_pos, move):
         robot_pos[1] -= 1
 
         return map_, robot_pos
-
-
-def print_map(map_, char_to_reverse=None):
-    console = Console()
-    """custom map print"""
-    for i in range(map_.shape[0]):
-        for j in range(map_.shape[1]):
-            if char_to_reverse and i == char_to_reverse[0] and j == char_to_reverse[1]:
-                console.print(map_[i, j], end="", style="reverse")
-            else:
-                print(map_[i, j], end="")
-        print("")
-    print("")
-
-
-def part_1(map__, robot_pos):
-    for move in moves_sequence:
-        map__, robot_pos = move_robot(map__, robot_pos, move)
-        # print_map(map__)
-
-    sum_ = 0
-    for i in range(map_.shape[0]):
-        for j in range(map_.shape[1]):
-            if map_[i, j] == "O":
-                sum_ += 100 * i + j
-
-    return sum_
 
 
 def expand_map(map_):
@@ -114,145 +104,100 @@ def expand_map(map_):
     return new_map
 
 
-def move_cells(map_, cell_to_move, move, do_not_check_first=False):
-    # print_map(map_, char_to_reverse=cell_to_move)
+def move_cells_upward(map_, cell_to_move, move):
+    if "." not in map_[:cell_to_move[0], cell_to_move[1]]:
+        return False  # do nothing, this cell can't move
 
-    if move == "^":
-        if "." not in map_[:cell_to_move[0], cell_to_move[1]]:
-            return False  # do nothing, this cell can't move
+    block_last_idx = cell_to_move[0] - 1
 
-        block_last_idx = cell_to_move[0] - 1
+    while "." not in map_[block_last_idx:cell_to_move[0], cell_to_move[1]]:
+        block = list(reversed(map_[block_last_idx:cell_to_move[0], cell_to_move[1]]))
+        if "#" in block:
+            return False  # can't move walls
 
-        while "." not in map_[block_last_idx:cell_to_move[0], cell_to_move[1]]:
-            block = list(reversed(map_[block_last_idx:cell_to_move[0], cell_to_move[1]]))
-            if "#" in block:
-                return False  # can't move walls
+        for i in range(len(block)):
+            if block[i] == "[":
+                if map_[cell_to_move[0] - (i+1), cell_to_move[1] + 1] == "]":
+                    result = move_cells_upward(deepcopy(map_), (cell_to_move[0] - (i+1), cell_to_move[1] + 1), move)
+                    if result is not False:
+                        map_ = result
+                    else:
+                        return False
 
-            for i in range(len(block)):
-                if block[i] == "[":
-                    if map_[cell_to_move[0] - (i+1), cell_to_move[1] + 1] == "]":
-                        result = move_cells(deepcopy(map_), (cell_to_move[0] - (i+1), cell_to_move[1] + 1), move)
-                        if result is not False:
-                            map_ = result
-                        else:
-                            return False
+            elif block[i] == "]":
+                if map_[cell_to_move[0] - (i+1), cell_to_move[1] - 1] == "[":
+                    result = move_cells_upward(deepcopy(map_), (cell_to_move[0] - (i+1), cell_to_move[1] - 1), move)
+                    if result is not False:
+                        map_ = result
+                    else:
+                        return False
 
-                elif block[i] == "]":
-                    if map_[cell_to_move[0] - (i+1), cell_to_move[1] - 1] == "[":
-                        result = move_cells(deepcopy(map_), (cell_to_move[0] - (i+1), cell_to_move[1] - 1), move)
-                        if result is not False:
-                            map_ = result
-                        else:
-                            return False
+        block_last_idx -= 1
 
-            block_last_idx -= 1
-
-        map_[block_last_idx:cell_to_move[0], cell_to_move[1]] = map_[
-            block_last_idx + 1: cell_to_move[0] + 1, cell_to_move[1]
-        ]
-        map_[cell_to_move[0], cell_to_move[1]] = "."
-
-    elif move == "v":
-        if "." not in map_[cell_to_move[0] + 1:, cell_to_move[1]]:
-            return False  # do nothing, this cell can't move
-
-        block_last_idx = cell_to_move[0] + 1
-        while "." not in map_[cell_to_move[0]+1:block_last_idx, cell_to_move[1]]:
-            block = map_[cell_to_move[0]+1:block_last_idx, cell_to_move[1]]
-            if "#" in block:
-                return False  # can't move walls
-
-            for i in range(block.shape[0]):
-                if block[i] == "[":
-                    if map_[cell_to_move[0] + i+1, cell_to_move[1] + 1] == "]":
-                        result = move_cells(deepcopy(map_), (cell_to_move[0] + i+1, cell_to_move[1] + 1), move)
-                        if result is not False:
-                            map_ = result
-                            # print_map(map_, char_to_reverse=cell_to_move)
-                        else:
-                            return False
-
-                elif block[i] == "]":
-                    if map_[cell_to_move[0] + i+1, cell_to_move[1] - 1] == "[":
-                        result = move_cells(deepcopy(map_), (cell_to_move[0] + i+1, cell_to_move[1] - 1), move)
-                        if result is not False:
-                            map_ = result
-                            # print_map(map_, char_to_reverse=cell_to_move)
-                        else:
-                            return False
-
-            block_last_idx += 1
-
-        map_[cell_to_move[0] + 1:block_last_idx, cell_to_move[1]] = map_[
-            cell_to_move[0]:block_last_idx - 1, cell_to_move[1]
-        ]
-        map_[cell_to_move[0], cell_to_move[1]] = "."
+    map_[block_last_idx:cell_to_move[0], cell_to_move[1]] = map_[
+        block_last_idx + 1: cell_to_move[0] + 1, cell_to_move[1]
+    ]
+    map_[cell_to_move[0], cell_to_move[1]] = "."
 
     return map_
 
 
-def move_robot_new_map(map_, robot_pos, move):
-    if move == "^":
-        result = move_cells(deepcopy(map_), robot_pos, move)
-        if result is not False:
-            map_ = result
-            robot_pos[0] -= 1
+def move_cells_downward(map_, cell_to_move, move):
+    if "." not in map_[cell_to_move[0] + 1:, cell_to_move[1]]:
+        return False  # do nothing, this cell can't move
 
-        return map_, robot_pos
+    block_last_idx = cell_to_move[0] + 1
+    while "." not in map_[cell_to_move[0]+1:block_last_idx, cell_to_move[1]]:
+        block = map_[cell_to_move[0]+1:block_last_idx, cell_to_move[1]]
+        if "#" in block:
+            return False  # can't move walls
 
-    elif move == ">":
-        if "." not in map_[robot_pos[0]][robot_pos[1] + 1:]:
-            return map_, robot_pos  # do nothing, robot can't move
+        for i in range(block.shape[0]):
+            if block[i] == "[":
+                if map_[cell_to_move[0] + i+1, cell_to_move[1] + 1] == "]":
+                    result = move_cells_downward(deepcopy(map_), (cell_to_move[0] + i+1, cell_to_move[1] + 1), move)
+                    if result is not False:
+                        map_ = result
+                    else:
+                        return False
 
-        block_last_idx = robot_pos[1] + 1
-        while "." not in map_[robot_pos[0], robot_pos[1]:block_last_idx]:
-            if "#" in map_[robot_pos[0], robot_pos[1]:block_last_idx]:
-                return map_, robot_pos  # can't move walls
-            block_last_idx += 1
+            elif block[i] == "]":
+                if map_[cell_to_move[0] + i+1, cell_to_move[1] - 1] == "[":
+                    result = move_cells_downward(deepcopy(map_), (cell_to_move[0] + i+1, cell_to_move[1] - 1), move)
+                    if result is not False:
+                        map_ = result
+                    else:
+                        return False
 
-        map_[robot_pos[0], robot_pos[1] + 1:block_last_idx] = map_[robot_pos[0], robot_pos[1]:block_last_idx - 1]
-        map_[robot_pos[0], robot_pos[1]] = "."
-        robot_pos[1] += 1
+        block_last_idx += 1
 
-        return map_, robot_pos
+    map_[cell_to_move[0] + 1:block_last_idx, cell_to_move[1]] = map_[
+        cell_to_move[0]:block_last_idx - 1, cell_to_move[1]
+    ]
+    map_[cell_to_move[0], cell_to_move[1]] = "."
 
-    elif move == "v":
-        result = move_cells(deepcopy(map_), robot_pos, move)
-        if result is not False:
-            map_ = result
-            robot_pos[0] += 1
+    return map_
 
-        return map_, robot_pos
 
-    elif move == "<":
-        if "." not in map_[robot_pos[0]][:robot_pos[1]]:
-            return map_, robot_pos  # do nothing, robot can't move
-
-        block_last_idx = robot_pos[1] - 1
-        while "." not in map_[robot_pos[0], block_last_idx:robot_pos[1]]:
-            if "#" in map_[robot_pos[0], block_last_idx:robot_pos[1]]:
-                return map_, robot_pos  # can't move walls
-            block_last_idx -= 1
-
-        map_[robot_pos[0], block_last_idx:robot_pos[1]] = map_[robot_pos[0], block_last_idx + 1:robot_pos[1] + 1]
-        map_[robot_pos[0], robot_pos[1]] = "."
-        robot_pos[1] -= 1
-
-        return map_, robot_pos
+def print_map(map_, char_to_reverse=None):
+    """custom map print"""
+    console = Console()
+    for i in range(map_.shape[0]):
+        for j in range(map_.shape[1]):
+            if char_to_reverse and i == char_to_reverse[0] and j == char_to_reverse[1]:
+                console.print(map_[i, j], end="", style="reverse")
+            else:
+                print(map_[i, j], end="")
+        print("")
+    print("")
 
 
 if __name__ == "__main__":
-    # Console().clear()
-
-    # f = open("inputs/day15_small.txt", "r")
-    # f = open("inputs/day15_small_2.txt", "r")
-    # f = open("inputs/day15_medium.txt", "r")
     f = open("inputs/day15.txt", "r")
     inputs = f.read().split("\n\n")
     f.close()
 
     map_ = array([list(line) for line in inputs[0].splitlines()])
-    print_map(map_)
 
     moves_sequence = list("".join(inputs[1].splitlines())) if "\n" in inputs[1][:-1] else list(inputs[1])[:-1]
 
@@ -264,24 +209,27 @@ if __name__ == "__main__":
                 break
 
     # Part 1
-    sum_ = part_1(deepcopy(map_), deepcopy(robot_position))
+    map__ = deepcopy(map_)
+    robot_pos = deepcopy(robot_position)
+
+    for move in moves_sequence:
+        map__, robot_pos = move_robot(map__, robot_pos, move)
+
+    sum_ = 0
+    for i in range(map__.shape[0]):
+        for j in range(map__.shape[1]):
+            if map__[i, j] == "O":
+                sum_ += 100 * i + j
+
     print(sum_)
 
     # Part 2
     new_map = expand_map(map_)
     robot_position = [robot_position[0], robot_position[1]*2]
-    print_map(new_map)
 
-    # for i in range(len(moves_sequence)):
-    #     if i % 10 == 0:
-    #         print(i)
-    #     print(moves_sequence[i])
-    #     new_map, robot_position = move_robot_new_map(new_map, robot_position, moves_sequence[i])
-    #     print_map(new_map)
     for move in moves_sequence:
-        print(move)
-        new_map, robot_position = move_robot_new_map(new_map, robot_position, move)
-        # print_map(new_map)
+        # new_map, robot_position = move_robot_new_map(new_map, robot_position, move)
+        new_map, robot_position = move_robot(new_map, robot_position, move, new_map=True)
 
     sum_2 = 0
     for i in range(new_map.shape[0]):
