@@ -19,29 +19,22 @@ def compute_program(program, registers):
             combo_operand = registers[2]
 
         if instruction == 0:  # adv
-            result = registers[0] / 2**combo_operand
-            registers[0] = int(result)
+            registers[0] = int(registers[0] / 2**combo_operand)
         elif instruction == 1:  # bxl
-            result = registers[1] ^ operand
-            registers[1] = result
+            registers[1] = registers[1] ^ operand
         elif instruction == 2:  # bst
-            result = combo_operand % 8
-            registers[1] = result
+            registers[1] = combo_operand % 8
         elif instruction == 3:  # jnz
             if registers[0] != 0:
                 i = operand - 2
         elif instruction == 4:  # bxc
-            result = registers[1] ^ registers[2]
-            registers[1] = result
+            registers[1] = registers[1] ^ registers[2]
         elif instruction == 5:  # out
-            result = combo_operand % 8
-            outputs.append(result)
+            outputs.append(combo_operand % 8)
         elif instruction == 6:  # bdv
-            result = registers[0] / 2**combo_operand
-            registers[1] = int(result)
+            registers[1] = int(registers[0] / 2**combo_operand)
         elif instruction == 7:  # cdv
-            result = registers[0] / 2**combo_operand
-            registers[2] = int(result)
+            registers[2] = int(registers[0] / 2**combo_operand)
 
         i += 2
 
@@ -49,14 +42,10 @@ def compute_program(program, registers):
 
 
 def worker_task(start, end, program):
-    # start, end, program = args
-
     outputs = []
     i = start
+
     while outputs != program and i < end:
-        if i % 1000000 == 0:
-            print(i)
-        # print(f"{i=}, {outputs=}, {program=}")
         registers = [i, 0, 0]
         outputs = compute_program(program, registers)
         i += 1
@@ -64,6 +53,23 @@ def worker_task(start, end, program):
     if outputs == program:
         print(",".join([str(value) for value in outputs]))
         print(i-1)
+
+
+def brute_force_part2(program):
+    max_iterations = 10**9
+    segment = max_iterations // cpu_count()
+    processes = []
+
+    for i in range(cpu_count()):
+        start = i * segment
+        end = start + segment
+
+        p = Process(target=worker_task, args=(start, end, program))
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
 
 
 if __name__ == "__main__":
@@ -80,32 +86,26 @@ if __name__ == "__main__":
     outputs = compute_program(program, registers)
     print(",".join([str(value) for value in outputs]))
 
-    # Part 2
-    # outputs = []
-    # i = 0
+    # Part 2:  trying brute force: impossible to solve in a reasonable time
+    # brute_force_part2(program)
 
-    # while outputs != program:
-    #     # print(f"{i=}, {outputs=}, {program=}")
-    #     registers = [i, 0, 0]
-    #     outputs = compute_program(program, registers)
-    #     i += 1
+    # decomposed program
+    a = 62769524
+    b = 0
+    c = 0
+    outputs = []
 
-    # print(",".join([str(value) for value in outputs]))
-    # print(i-1)
+    while a != 0:
+        b = int(a / (2**((a % 8) ^ 7)))
 
-    target_outputs = program
-    max_iterations = 1000000000
+        result = (a % 8) ^ 7
+        result = result ^ b
+        result = result ^ 7
+        result = result % 8
+        outputs.append(str(result))
 
-    segment = max_iterations // cpu_count()
-    processes = []
+        # outputs.append(str(((((a % 8) ^ 7) ^ int(a / (2**((a % 8) ^ 7)))) ^ 7) % 8))  # one-line version
 
-    for i in range(cpu_count()):
-        start = i * segment
-        end = start + segment
+        a = int(a / 8)
 
-        p = Process(target=worker_task, args=(start, end, program))
-        processes.append(p)
-        p.start()
-
-    for p in processes:
-        p.join()
+    print(",".join(outputs))
