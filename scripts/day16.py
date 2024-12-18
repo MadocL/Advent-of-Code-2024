@@ -1,7 +1,5 @@
 from math import inf
 from rich.console import Console
-from sys import setrecursionlimit
-from copy import deepcopy
 
 
 def print_inputs(inputs, char_to_reverse=None):
@@ -17,84 +15,112 @@ def print_inputs(inputs, char_to_reverse=None):
     print("")
 
 
-def find_lowest_score_path(inputs, current_position, facing, visited, memoize):
-    # print_inputs(inputs, char_to_reverse=visited)
-    if inputs[current_position[0]][current_position[1]] == "E":
-        return 0
+def find_lowest_score_path(inputs, start_position, end):
+    heap = [start_position]
+    scores = {start_position: 0}
+    facings = {start_position: "east"}
+    predecessors = {}
+    visited = []
 
-    if memoize.get((current_position, facing)) is not None:
-        return memoize[(current_position, facing)]
+    while len(heap) > 0:
+        # print_inputs(inputs, char_to_reverse=visited)
+        current_position = heap.pop(heap.index(min(heap, key=lambda x: scores.get(x, inf))))  # select min score cell
+        visited.append(current_position)
 
-    next_possible_moves = []
+        for move in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+            neighbour = (current_position[0] + move[0], current_position[1] + move[1])
 
-    for move in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-        neighbour = (current_position[0] + move[0], current_position[1] + move[1])
+            if (  # out of bounds
+                not 0 <= neighbour[0] < len(inputs)
+                or not 0 <= neighbour[1] < len(inputs[0])
+            ):
+                continue
 
-        if inputs[neighbour[0]][neighbour[1]] != "#" and neighbour not in visited:
-            if move == (0, 1):
-                if facing == "east":
-                    next_possible_moves.append((1, neighbour, facing))
-                elif facing == "north" or facing == "south":
-                    next_possible_moves.append((1001, neighbour, "east"))
-                else:
-                    next_possible_moves.append((2001, neighbour, "east"))
-            elif move == (1, 0):
-                if facing == "south":
-                    next_possible_moves.append((1, neighbour, facing))
-                elif facing == "west" or facing == "east":
-                    next_possible_moves.append((1001, neighbour, "south"))
-                else:
-                    next_possible_moves.append((2001, neighbour, "south"))
-            elif move == (0, -1):
-                if facing == "west":
-                    next_possible_moves.append((1, neighbour, facing))
-                elif facing == "north" or facing == "south":
-                    next_possible_moves.append((1001, neighbour, "west"))
-                else:
-                    next_possible_moves.append((2001, neighbour, "west"))
-            else:  # to the west
-                if facing == "north":
-                    next_possible_moves.append((1, neighbour, facing))
-                elif facing == "west" or facing == "east":
-                    next_possible_moves.append((1001, neighbour, "north"))
-                else:
-                    next_possible_moves.append((2001, neighbour, "north"))
+            if inputs[neighbour[0]][neighbour[1]] == "#":  # wall
+                continue
 
-    visited.add(current_position)
+            if neighbour not in visited and neighbour not in heap:
+                heap.append(neighbour)
 
-    if len(next_possible_moves) == 0:
-        return inf
+                new_facing, turning_malus = get_new_facing_and_turning_malus(facings[current_position], move)
+                facings[neighbour] = new_facing
 
-    score_ = min([
-        score + find_lowest_score_path(inputs, next_position, next_facing, deepcopy(visited), memoize)
-        for score, next_position, next_facing in next_possible_moves
-    ])
+                if scores[current_position] + turning_malus + 1 < scores.get(neighbour, inf):
+                    predecessors[neighbour] = current_position
+                    scores[neighbour] = scores[current_position] + turning_malus + 1
 
-    memoize[(current_position, facing)] = score_
-    return score_
+    return scores[end], predecessors
+
+
+def get_new_facing_and_turning_malus(facing, move):
+    TURNING_MALUS = 1000
+
+    if facing == "north":
+        if move == (-1, 0):
+            return "north", 0*TURNING_MALUS
+        if move == (0, 1):
+            return "east", 1*TURNING_MALUS
+        if move == (0, -1):
+            return "west", 1*TURNING_MALUS
+        return "south", 2*TURNING_MALUS
+
+    if facing == "east":
+        if move == (0, 1):
+            return "east", 0*TURNING_MALUS
+        if move == (1, 0):
+            return "south", 1*TURNING_MALUS
+        if move == (-1, 0):
+            return "north", 1*TURNING_MALUS
+        return "west", 2*TURNING_MALUS
+
+    if facing == "south":
+        if move == (1, 0):
+            return "south", 0*TURNING_MALUS
+        if move == (0, -1):
+            return "west", 1*TURNING_MALUS
+        if move == (0, 1):
+            return "east", 1*TURNING_MALUS
+        return "north", 2*TURNING_MALUS
+
+    if facing == "west":
+        if move == (0, -1):
+            return "west", 0*TURNING_MALUS
+        if move == (-1, 0):
+            return "north", 1*TURNING_MALUS
+        if move == (1, 0):
+            return "south", 1*TURNING_MALUS
+        return "east", 2*TURNING_MALUS
 
 
 if __name__ == "__main__":
-    setrecursionlimit(10000)
-
     # f = open("inputs/day16_small.txt", "r")
     # f = open("inputs/day16_medium.txt", "r")
     f = open("inputs/day16.txt", "r")
     inputs = [list(line) for line in f.read().splitlines()]
     f.close()
 
-    memoize = {}
-
-    # search START
+    # search START and END
     start = None
+    end = None
+
     for i in range(len(inputs)):
         for j in range(len(inputs[i])):
             if inputs[i][j] == "S":
                 start = (i, j)
-                break
-        if start is not None:
-            break
+            elif inputs[i][j] == "E":
+                end = (i, j)
 
-    score = find_lowest_score_path(inputs, start, "east", set(), memoize)
-
+    # Part 1
+    score, predecessors = find_lowest_score_path(inputs, start, end)
     print(score)
+
+    # Part 2
+    shortest_path = []
+    current_position = end
+
+    while current_position is not None:
+        shortest_path.append(current_position)
+        current_position = predecessors.get(current_position, None)
+
+    # print(shortest_path)
+    print_inputs(inputs, char_to_reverse=shortest_path)
